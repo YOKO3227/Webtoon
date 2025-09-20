@@ -1,583 +1,998 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>깃허브 이미지 말풍선 편집기</title>
+    <title>AI 이미지 텍스트 오버레이 편집기</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            color: #333;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 1.1rem;
-        }
-
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.03);
-            border-radius: 15px;
-            align-items: center;
-        }
-
-        .input-group {
-            flex: 1;
-            min-width: 300px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .input-group input:focus, .input-group select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            padding: 12px 25px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .editor-container {
-            position: relative;
-            border: 3px dashed #ddd;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #fafafa;
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .editor-container.has-image {
-            border: none;
-            background: transparent;
-        }
-
-        .placeholder {
-            text-align: center;
-            color: #999;
-            font-size: 1.2rem;
-        }
-
-        .canvas-container {
-            position: relative;
-            display: inline-block;
-            max-width: 100%;
-        }
-
-        .base-image {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .speech-bubble {
-            position: absolute;
-            background: white;
-            border: 3px solid #333;
-            border-radius: 20px;
-            padding: 12px 18px;
-            font-weight: bold;
-            cursor: move;
-            user-select: none;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            min-width: 120px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .speech-bubble:hover {
-            transform: scale(1.05);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-        }
-
-        .speech-bubble.selected {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
-        }
-
-        .speech-bubble::before {
-            content: '';
-            position: absolute;
-            bottom: -12px;
-            left: 30px;
-            width: 0;
-            height: 0;
-            border: 12px solid transparent;
-            border-top-color: #333;
-        }
-
-        .speech-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -6px;
-            left: 33px;
-            width: 0;
-            height: 0;
-            border: 9px solid transparent;
-            border-top-color: white;
-        }
-
-        .bubble-controls {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: 15px;
-        }
-
-        .bubble-controls.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .download-section {
-            margin-top: 30px;
-            text-align: center;
-            padding: 20px;
-            background: rgba(118, 75, 162, 0.1);
-            border-radius: 15px;
-        }
-
-        .error {
-            color: #e74c3c;
-            padding: 10px;
-            background: rgba(231, 76, 60, 0.1);
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        .success {
-            color: #27ae60;
-            padding: 10px;
-            background: rgba(39, 174, 96, 0.1);
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .controls {
-                flex-direction: column;
-            }
-            
-            .input-group {
-                min-width: 100%;
-            }
-        }
+        /* ... (이전 CSS 스타일은 변경 없이 그대로 유지) ... */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 24px; }
+        .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .main-content { display: flex; min-height: 600px; }
+        .sidebar { width: 420px; padding: 24px; border-right: 1px solid #e5e7eb; overflow-y: auto; max-height: 80vh; background: #fafafa; }
+        .preview-area { flex: 1; padding: 24px; position: relative; background: white; }
+        .section { margin-bottom: 28px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .section-title::before { content: ''; width: 4px; height: 20px; background: #4f46e5; border-radius: 2px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #374151; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: all 0.2s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .form-group textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+        .help-text { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+        .preview-canvas { position: relative; border: 2px dashed #d1d5db; background: white; min-height: 400px; display: inline-block; border-radius: 8px; transition: all 0.3s; }
+        .preview-canvas.dragover { border-color: #4f46e5; background: #f0f9ff; }
+        .text-overlay { position: absolute; border: 1px dashed #94a3b8; cursor: move; user-select: none; padding: 4px; transition: border-color 0.2s; }
+        .text-overlay:hover { border-color: #4f46e5; }
+        .text-overlay.selected { border: 2px solid #4f46e5; background: rgba(79, 70, 229, 0.05); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .resize-handle { position: absolute; width: 10px; height: 10px; background: #4f46e5; border: 2px solid white; border-radius: 50%; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .text-overlay.selected .resize-handle { display: block; }
+        .resize-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+        .element-list { border: 1px solid #e5e7eb; border-radius: 6px; max-height: 200px; overflow-y: auto; background: white; }
+        .element-item { padding: 12px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+        .element-item:last-child { border-bottom: none; }
+        .element-item:hover { background: #f9fafb; }
+        .element-item.selected { background: #ede9fe; border-left: 3px solid #4f46e5; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .json-output { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 6px; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-height: 400px; line-height: 1.5; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { position: relative; background: white; margin: 40px auto; padding: 32px; width: 90%; max-width: 900px; border-radius: 12px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-close { position: absolute; top: 16px; right: 20px; font-size: 32px; cursor: pointer; color: #6b7280; line-height: 1; transition: color 0.2s; }
+        .modal-close:hover { color: #1f2937; }
+        .modal h2 { margin-bottom: 20px; color: #1f2937; font-size: 24px; }
+        .modal h3 { margin-top: 24px; margin-bottom: 12px; color: #374151; font-size: 18px; font-weight: 600; }
+        .example-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 12px 0; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
+        .tab-buttons { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+        .tab-button { padding: 8px 16px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-button.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .font-input-group { display: flex; gap: 8px; align-items: flex-end; }
+        .font-input-group select, .font-input-group input { flex: 1; }
+        .color-input-wrapper { display: flex; gap: 8px; align-items: center; }
+        .color-input-wrapper input[type="color"] { width: 50px; height: 38px; padding: 4px; cursor: pointer; }
+        .color-input-wrapper input[type="text"] { flex: 1; }
+        .empty-state { padding: 20px; text-align: center; color: #9ca3af; font-size: 14px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎨 말풍선 편집기</h1>
-            <p>깃허브 이미지에 말풍선을 추가해보세요</p>
+            <h1>🎨 AI 이미지 텍스트 오버레이 편집기</h1>
+            <p>이미지 위에 텍스트를 배치하고 JSON 설정을 생성하세요</p>
         </div>
-
-        <div class="controls">
-            <div class="input-group">
-                <label for="imageUrl">깃허브 이미지 URL</label>
-                <input type="url" id="imageUrl" placeholder="https://raw.githubusercontent.com/user_name/repository_name/refs/heads/main/image.png">
-            </div>
-            <button class="btn" onclick="loadImage()">이미지 로드</button>
-        </div>
-
-        <div id="message"></div>
-
-        <div class="editor-container" id="editorContainer">
-            <div class="placeholder">
-                이미지 URL을 입력하고 "이미지 로드" 버튼을 클릭하세요<br>
-                이미지가 로드되면 클릭하여 말풍선을 추가할 수 있습니다
-            </div>
-        </div>
-
-        <div class="bubble-controls" id="bubbleControls">
-            <h3>선택된 말풍선 편집</h3>
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
-                <div class="input-group" style="flex: 2; min-width: 200px;">
-                    <label for="bubbleText">텍스트</label>
-                    <input type="text" id="bubbleText" placeholder="말풍선 내용을 입력하세요">
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- 기본 설정 -->
+                <div class="section">
+                    <h3 class="section-title">기본 설정</h3>
+                    
+                    <div class="form-group">
+                        <label>베이스 URL</label>
+                        <input type="text" id="baseUrl" placeholder="https://your-worker.domain.com">
+                        <div class="help-text">Worker가 배포된 도메인 주소 (선택사항)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>R2 버킷명</label>
+                        <input type="text" id="bucketName" placeholder="예: my-image-bucket" value="my-bucket">
+                        <div class="help-text">Cloudflare R2 버킷 바인딩 이름</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>프로젝트 폴더명</label>
+                        <input type="text" id="projectFolder" placeholder="예: elise" value="character">
+                        <div class="help-text">모든 관련 파일(json, fonts, 이미지)을 담는 폴더</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>이미지 경로</label>
+                        <input type="text" id="imagePath" placeholder="예: happy.png 또는 emotions/happy.png" value="emotion.png">
+                        <div class="help-text">프로젝트 폴더 내의 이미지 경로 (.png 포함)</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-group">
+                            <label>이미지 너비</label>
+                            <input type="number" id="imageWidth" value="800" min="100" max="4000">
+                        </div>
+                        <div class="form-group">
+                            <label>이미지 높이</label>
+                            <input type="number" id="imageHeight" value="600" min="100" max="4000">
+                        </div>
+                    </div>
                 </div>
-                <div class="input-group" style="flex: 1; min-width: 150px;">
-                    <label for="bubbleColor">배경색</label>
-                    <select id="bubbleColor">
-                        <option value="white">흰색</option>
-                        <option value="#ffeb3b">노란색</option>
-                        <option value="#e3f2fd">하늘색</option>
-                        <option value="#f3e5f5">분홍색</option>
-                        <option value="#e8f5e8">연두색</option>
-                    </select>
+                
+                <!-- 폰트 설정 -->
+                <div class="section">
+                    <h3 class="section-title">폰트 설정</h3>
+                    
+                    <div class="tab-buttons">
+                        <button class="tab-button active" onclick="switchFontTab('default', event)">기본 폰트</button>
+                        <button class="tab-button" onclick="switchFontTab('web', event)">웹폰트</button>
+                        <button class="tab-button" onclick="switchFontTab('r2', event)">R2 폰트</button>
+                    </div>
+                    
+                    <div id="defaultFontTab" class="tab-content active">
+                        <div class="help-text">
+                            시스템 기본 폰트를 사용합니다. 
+                            텍스트 요소에서 폰트 패밀리를 직접 지정할 수 있습니다.
+                        </div>
+                    </div>
+                    
+                    <div id="webFontTab" class="tab-content">
+                        <div class="form-group">
+                            <label>웹폰트 URL</label>
+                            <input type="text" id="webFontUrl" placeholder="https://fonts.googleapis.com/css2?family=Noto+Sans+KR">
+                            <div class="help-text">Google Fonts 등의 웹폰트 URL</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addWebFont()">
+                            <span>➕</span> 웹폰트 추가
+                        </button>
+                    </div>
+                    
+                    <div id="r2FontTab" class="tab-content">
+                        <div class="form-group">
+                            <label>R2 폰트 파일명</label>
+                            <input type="text" id="r2FontFilename" placeholder="예: NotoSansKR.ttf">
+                            <div class="help-text">
+                                프로젝트 폴더 내 `fonts/` 폴더에 업로드된 폰트 파일명<br>
+                                지원 형식: .woff2, .woff, .ttf, .otf
+                            </div>
+                        </div>
+                        <!-- ★★★ 개선점 2: 'R2 폰트 사용' 체크박스를 텍스트 요소 설정에서 여기로 이동 -->
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="useR2Font" onchange="updateCurrentElementStyle()">
+                                <strong>선택된 텍스트 요소에 R2 폰트 적용하기</strong>
+                            </label>
+                            <div class="help-text">
+                                위 파일명에 입력된 폰트를 현재 선택된 텍스트 요소에 적용합니다.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label>등록된 폰트</label>
+                        <div id="fontList" class="element-list">
+                            <div class="empty-state">등록된 폰트가 없습니다</div>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn" onclick="updateSelectedBubble()">수정</button>
-                <button class="btn" onclick="deleteSelectedBubble()" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">삭제</button>
+                
+                <!-- 텍스트 요소 -->
+                <div class="section">
+                    <h3 class="section-title">텍스트 요소</h3>
+                    
+                    <div class="form-group">
+                        <label>쿼리 파라미터 이름</label>
+                        <input type="text" id="queryParam" placeholder="예: title, message">
+                        <div class="help-text">URL에서 ?title=텍스트 형태로 사용</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>미리보기 텍스트</label>
+                        <textarea id="previewText" placeholder="미리보기에 표시할 텍스트를 입력하세요
+여러 줄 입력 가능합니다" oninput="updateCurrentElementPreview()">샘플 텍스트입니다.
+여러 줄로 작성할 수 있습니다.</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-group">
+                            <label>X 위치</label>
+                            <input type="number" id="textX" value="50" min="0" oninput="updateCurrentElementStyle()">
+                        </div>
+                        <div class="form-group">
+                            <label>Y 위치</label>
+                            <input type="number" id="textY" value="50" min="0" oninput="updateCurrentElementStyle()">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-group">
+                            <label>너비</label>
+                            <input type="number" id="textWidth" value="300" min="50" oninput="updateCurrentElementStyle()">
+                        </div>
+                        <div class="form-group">
+                            <label>높이</label>
+                            <input type="number" id="textHeight" value="100" min="30" oninput="updateCurrentElementStyle()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>폰트 패밀리</label>
+                        <div class="font-input-group">
+                            <select id="fontFamilySelect" onchange="updateFontFamily()">
+                                <option value="sans-serif">고딕체 (Sans-serif)</option>
+                                <option value="serif">명조체 (Serif)</option>
+                                <option value="monospace">고정폭 (Monospace)</option>
+                                <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                                <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                                <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="custom">직접 입력...</option>
+                            </select>
+                            <input type="text" id="fontFamily" value="sans-serif" style="display: none;" 
+                                   placeholder="예: 'CustomFont', sans-serif" oninput="updateCurrentElementStyle()">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-group">
+                            <label>폰트 크기 (px)</label>
+                            <input type="number" id="fontSize" value="24" min="8" max="200" oninput="updateCurrentElementStyle()">
+                        </div>
+                        <div class="form-group">
+                            <label>줄 간격</label>
+                            <input type="number" id="lineHeight" value="1.5" min="0.5" max="3" step="0.1" oninput="updateCurrentElementStyle()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>텍스트 색상</label>
+                        <div class="color-input-wrapper">
+                            <input type="color" id="textColor" value="#000000" oninput="updateCurrentElementStyle()">
+                            <input type="text" id="textColorHex" value="#000000" placeholder="#000000" oninput="updateColorFromHex()">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-group">
+                            <label>가로 정렬</label>
+                            <select id="textAlign" onchange="updateCurrentElementStyle()">
+                                <option value="left">왼쪽</option>
+                                <option value="center">가운데</option>
+                                <option value="right">오른쪽</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>세로 정렬</label>
+                            <select id="verticalAlign" onchange="updateCurrentElementStyle()">
+                                <option value="top">위</option>
+                                <option value="middle">중간</option>
+                                <option value="bottom">아래</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>텍스트 줄바꿈</label>
+                        <select id="whiteSpace" onchange="updateCurrentElementStyle()">
+                            <option value="pre-wrap">자동 줄바꿈 (공백 유지)</option>
+                            <option value="normal">자동 줄바꿈</option>
+                            <option value="nowrap">줄바꿈 없음</option>
+                            <option value="pre">입력한 그대로</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>텍스트 테두리 (선택사항)</label>
+                        <div class="row">
+                            <div class="form-group">
+                                <label style="font-weight: normal;">테두리 색상</label>
+                                <input type="color" id="strokeColor" value="#ffffff" oninput="updateCurrentElementStyle()">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: normal;">테두리 두께</label>
+                                <input type="number" id="strokeWidth" value="0" min="0" max="10" oninput="updateCurrentElementStyle()">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="addTextElement()">
+                            <span>➕</span> 새 요소 추가
+                        </button>
+                        <button class="btn btn-warning" onclick="updateSelectedElement()">
+                            <span>✏️</span> 선택 요소 수정
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 요소 목록 -->
+                <div class="section">
+                    <h3 class="section-title">텍스트 요소 목록</h3>
+                    <div id="elementList" class="element-list">
+                        <div class="empty-state">추가된 텍스트 요소가 없습니다</div>
+                    </div>
+                </div>
+                
+                <!-- JSON 출력 -->
+                <div class="section">
+                    <h3 class="section-title">JSON 설정</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="generateJSON()">
+                            <span>👁️</span> 미리보기
+                        </button>
+                        <button class="btn btn-primary" onclick="copyJSON()">
+                            <span>📋</span> 복사
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadJSON()">
+                            <span>💾</span> 다운로드
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadJSON()">
+                            <span>📂</span> 불러오기
+                        </button>
+                    </div>
+                    <input type="file" id="jsonFile" accept=".json" style="display: none;" onchange="handleJSONLoad(event)">
+                </div>
             </div>
-        </div>
-
-        <div class="download-section">
-            <h3>완성된 이미지 다운로드</h3>
-            <p>말풍선이 추가된 이미지를 PNG 파일로 저장하세요</p>
-            <button class="btn" onclick="downloadImage()" style="margin-top: 15px;">
-                📥 이미지 다운로드
-            </button>
+            
+            <div class="preview-area">
+                <h3 style="margin-bottom: 16px; color: #1f2937;">미리보기</h3>
+                <div class="help-text" style="margin-bottom: 16px;">
+                    이미지를 드래그 앤 드롭하거나 클릭하여 업로드하세요
+                </div>
+                
+                <div id="previewCanvas" class="preview-canvas">
+                    <div class="empty-state" style="padding: 60px 40px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🖼️</div>
+                        <div>배경 이미지를 업로드하거나</div>
+                        <div>기본 캔버스를 생성하세요</div>
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 20px;">
+                    <input type="file" id="bgImage" accept="image/*" style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('bgImage').click()">
+                        <span>📁</span> 이미지 업로드
+                    </button>
+                    <button class="btn btn-secondary" onclick="createDefaultCanvas()">
+                        <span>🎨</span> 기본 캔버스
+                    </button>
+                    <button class="btn btn-danger" onclick="clearCanvas()">
+                        <span>🗑️</span> 초기화
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <!-- JSON 미리보기 모달 -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>📄 JSON 미리보기 및 사용 방법</h2>
+            
+            <h3>생성된 JSON</h3>
+            <pre id="jsonOutput" class="json-output"></pre>
+            
+            <!-- ★★★ 개선점 1: 파일 구조 설명을 현재 Worker 로직에 맞게 업데이트 ★★★ -->
+            <h3>파일 구조 (프로젝트 폴더 방식)</h3>
+            <pre class="example-box" id="fileStructure"></pre>
+            
+            <h3>사용 예시</h3>
+            <pre class="example-box" id="usageExample"></pre>
+            
+            <h3>특수문자 처리 가이드</h3>
+            <div class="example-box">• 띄어쓰기 → 밑줄(_) 사용
+  예: Hello_World
 
+• 물음표 → %3F 사용
+  예: 뭐야%3F
+
+• 줄바꿈 → %0A 사용
+  예: 첫번째줄%0A두번째줄
+
+• 실제 사용 예시:
+  ?title=안녕하세요_여러분&message=오늘은%0A좋은_날입니다%3F</div>
+            
+            <div class="btn-group" style="margin-top: 24px;">
+                <button class="btn btn-primary" onclick="copyJSON()">
+                    <span>📋</span> JSON 복사
+                </button>
+                <button class="btn btn-success" onclick="downloadJSON()">
+                    <span>💾</span> JSON 다운로드
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal()">
+                    <span>✖️</span> 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        let currentImage = null;
-        let bubbleCounter = 0;
-        let selectedBubble = null;
+        // 전역 변수
+        let config = {
+            imageSize: {
+                width: 800,
+                height: 600
+            },
+            fonts: [],
+            fontSettings: {
+                mode: 'default'
+            },
+            elements: [],
+            defaultStyle: {
+                fontFamily: 'sans-serif',
+                fontSize: 24,
+                fill: '#000000',
+                textAlign: 'left',
+                verticalAlign: 'top',
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap'
+            }
+        };
+        
+        let selectedElementIndex = -1;
         let isDragging = false;
-        let dragOffset = { x: 0, y: 0 };
-
-        function showMessage(text, type = 'info') {
-            const messageEl = document.getElementById('message');
-            messageEl.textContent = text;
-            messageEl.className = type;
-            setTimeout(() => {
-                messageEl.textContent = '';
-                messageEl.className = '';
-            }, 3000);
-        }
-
-        function loadImage() {
-            const url = document.getElementById('imageUrl').value.trim();
-            if (!url) {
-                showMessage('이미지 URL을 입력해주세요.', 'error');
-                return;
-            }
-
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            
-            img.onload = function() {
-                currentImage = img;
-                const container = document.getElementById('editorContainer');
-                container.innerHTML = `
-                    <div class="canvas-container">
-                        <img src="${url}" class="base-image" id="baseImage">
-                    </div>
-                `;
-                container.classList.add('has-image');
-                
-                // 이미지 클릭 이벤트 추가
-                const baseImage = document.getElementById('baseImage');
-                baseImage.addEventListener('click', addSpeechBubble);
-                
-                showMessage('이미지가 성공적으로 로드되었습니다. 클릭하여 말풍선을 추가하세요!', 'success');
-            };
-
-            img.onerror = function() {
-                showMessage('이미지를 로드할 수 없습니다. URL을 확인해주세요.', 'error');
-            };
-
-            img.src = url;
-        }
-
-        function addSpeechBubble(event) {
-            event.preventDefault();
-            
-            const container = document.querySelector('.canvas-container');
-            const rect = container.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-
-            bubbleCounter++;
-            const bubble = document.createElement('div');
-            bubble.className = 'speech-bubble';
-            bubble.textContent = `말풍선 ${bubbleCounter}`;
-            bubble.style.left = `${x - 60}px`;
-            bubble.style.top = `${y - 40}px`;
-            bubble.dataset.id = `bubble-${bubbleCounter}`;
-
-            // 말풍선 이벤트 리스너 추가
-            bubble.addEventListener('mousedown', startDrag);
-            bubble.addEventListener('click', selectBubble);
-
-            container.appendChild(bubble);
-            selectBubble({ target: bubble, stopPropagation: () => {} });
-        }
-
-        function selectBubble(event) {
-            event.stopPropagation();
-            
-            // 이전 선택 해제
-            if (selectedBubble) {
-                selectedBubble.classList.remove('selected');
-            }
-            
-            selectedBubble = event.target;
-            selectedBubble.classList.add('selected');
-            
-            // 편집 컨트롤 표시
-            const controls = document.getElementById('bubbleControls');
-            controls.classList.add('show');
-            
-            // 현재 텍스트를 입력 필드에 설정
-            document.getElementById('bubbleText').value = selectedBubble.textContent;
-            
-            // 현재 배경색 설정
-            const computedStyle = window.getComputedStyle(selectedBubble);
-            const bgColor = computedStyle.backgroundColor;
-            document.getElementById('bubbleColor').value = rgbToHex(bgColor) || 'white';
-        }
-
-        function updateSelectedBubble() {
-            if (!selectedBubble) return;
-            
-            const text = document.getElementById('bubbleText').value.trim();
-            const color = document.getElementById('bubbleColor').value;
-            
-            if (text) {
-                selectedBubble.textContent = text;
-            }
-            selectedBubble.style.backgroundColor = color;
-            
-            showMessage('말풍선이 수정되었습니다.', 'success');
-        }
-
-        function deleteSelectedBubble() {
-            if (!selectedBubble) return;
-            
-            selectedBubble.remove();
-            selectedBubble = null;
-            document.getElementById('bubbleControls').classList.remove('show');
-            
-            showMessage('말풍선이 삭제되었습니다.', 'success');
-        }
-
-        function startDrag(event) {
-            if (event.target.classList.contains('speech-bubble')) {
-                isDragging = true;
-                selectedBubble = event.target;
-                
-                const rect = event.target.getBoundingClientRect();
-                const containerRect = event.target.parentNode.getBoundingClientRect();
-                
-                dragOffset.x = event.clientX - rect.left;
-                dragOffset.y = event.clientY - rect.top;
-                
-                document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', stopDrag);
-                
-                event.preventDefault();
-                selectBubble(event);
-            }
-        }
-
-        function drag(event) {
-            if (!isDragging || !selectedBubble) return;
-            
-            const container = selectedBubble.parentNode;
-            const containerRect = container.getBoundingClientRect();
-            
-            const x = event.clientX - containerRect.left - dragOffset.x;
-            const y = event.clientY - containerRect.top - dragOffset.y;
-            
-            selectedBubble.style.left = `${Math.max(0, x)}px`;
-            selectedBubble.style.top = `${Math.max(0, y)}px`;
-        }
-
-        function stopDrag() {
-            isDragging = false;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDrag);
-        }
-
-        function downloadImage() {
-            if (!currentImage) {
-                showMessage('먼저 이미지를 로드해주세요.', 'error');
-                return;
-            }
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            const baseImage = document.getElementById('baseImage');
-            canvas.width = baseImage.naturalWidth;
-            canvas.height = baseImage.naturalHeight;
-            
-            // 기본 이미지 그리기
-            ctx.drawImage(currentImage, 0, 0);
-            
-            // 말풍선들 그리기
-            const bubbles = document.querySelectorAll('.speech-bubble');
-            const scale = canvas.width / baseImage.offsetWidth;
-            
-            bubbles.forEach(bubble => {
-                const rect = bubble.getBoundingClientRect();
-                const containerRect = bubble.parentNode.getBoundingClientRect();
-                
-                const x = (rect.left - containerRect.left) * scale;
-                const y = (rect.top - containerRect.top) * scale;
-                const width = rect.width * scale;
-                const height = rect.height * scale;
-                
-                // 말풍선 배경 그리기
-                ctx.fillStyle = window.getComputedStyle(bubble).backgroundColor;
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3 * scale;
-                
-                // 둥근 사각형 그리기
-                const radius = 20 * scale;
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + width - radius, y);
-                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                ctx.lineTo(x + width, y + height - radius);
-                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                ctx.lineTo(x + radius, y + height);
-                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
-                // 말풍선 꼬리 그리기
-                const tailX = x + 30 * scale;
-                const tailY = y + height;
-                ctx.beginPath();
-                ctx.moveTo(tailX, tailY);
-                ctx.lineTo(tailX - 12 * scale, tailY + 12 * scale);
-                ctx.lineTo(tailX + 12 * scale, tailY + 12 * scale);
-                ctx.closePath();
-                ctx.fillStyle = window.getComputedStyle(bubble).backgroundColor;
-                ctx.fill();
-                ctx.stroke();
-                
-                // 텍스트 그리기
-                ctx.fillStyle = '#000';
-                ctx.font = `bold ${16 * scale}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(
-                    bubble.textContent,
-                    x + width / 2,
-                    y + height / 2
-                );
-            });
-            
-            // 다운로드
-            canvas.toBlob(function(blob) {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'speech-bubble-image.png';
-                a.click();
-                URL.revokeObjectURL(url);
-                showMessage('이미지가 다운로드되었습니다!', 'success');
-            });
-        }
-
-        function rgbToHex(rgb) {
-            if (!rgb) return null;
-            const result = rgb.match(/\d+/g);
-            if (!result) return null;
-            return "#" + ((1 << 24) + (parseInt(result[0]) << 16) + (parseInt(result[1]) << 8) + parseInt(result[2])).toString(16).slice(1);
-        }
-
-        // 빈 영역 클릭 시 선택 해제
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.speech-bubble') && !event.target.closest('.bubble-controls')) {
-                if (selectedBubble) {
-                    selectedBubble.classList.remove('selected');
-                    selectedBubble = null;
-                    document.getElementById('bubbleControls').classList.remove('show');
-                }
-            }
+        let isResizing = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let elementStartX = 0;
+        let elementStartY = 0;
+        let currentScale = 1;
+        let activeTextElement = null;
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            createDefaultCanvas();
+            updateFontMode();
         });
+        
+        function setupEventListeners() {
+            // 배경 이미지 업로드
+            document.getElementById('bgImage').addEventListener('change', handleBgImageUpload);
+            
+            // 색상 동기화
+            document.getElementById('textColor').addEventListener('input', function(e) {
+                document.getElementById('textColorHex').value = e.target.value;
+            });
+            
+            const canvas = document.getElementById('previewCanvas');
+            canvas.addEventListener('dragover', (e) => { e.preventDefault(); canvas.classList.add('dragover'); });
+            canvas.addEventListener('dragleave', (e) => { e.preventDefault(); canvas.classList.remove('dragover'); });
+            canvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                canvas.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    const fileInput = document.getElementById('bgImage');
+                    fileInput.files = files;
+                    handleBgImageUpload({ target: fileInput });
+                }
+            });
+            canvas.addEventListener('click', (e) => {
+                if (e.target === canvas || (e.target.parentElement === canvas && e.target.classList.contains('empty-state'))) {
+                    document.getElementById('bgImage').click();
+                }
+            });
+            
+            // 전역 마우스 이벤트
+            document.addEventListener('mousemove', handleGlobalMouseMove);
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+            document.getElementById('jsonModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+        }
+        
+        function switchFontTab(tab, event) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tab + 'FontTab').classList.add('active');
+            config.fontSettings.mode = tab;
+            updateFontMode();
+        }
+        
+        function updateFontMode() {
+            if (config.fontSettings.mode === 'r2') {
+                const filename = document.getElementById('r2FontFilename').value;
+                if (filename) config.fontSettings.r2FontFilename = filename;
+            }
+            updateFontList();
+        }
+        
+        function updateFontFamily() {
+            const select = document.getElementById('fontFamilySelect');
+            const input = document.getElementById('fontFamily');
+            if (select.value === 'custom') {
+                select.style.display = 'none';
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.value = select.value;
+                updateCurrentElementStyle();
+            }
+        }
+        
+        function updateColorFromHex() {
+            const hex = document.getElementById('textColorHex').value;
+            if (/^#[0-9A-F]{6}$/i.test(hex)) {
+                document.getElementById('textColor').value = hex;
+                updateCurrentElementStyle();
+            }
+        }
+        
+        function updateCurrentElementPreview() {
+            if (selectedElementIndex >= 0) updatePreview();
+        }
+        
+        // ★★★ 개선점 3: 드래그 중 실시간 업데이트를 위해 X,Y,너비,높이 업데이트 로직을 통합하고
+        // oninput 이벤트 핸들러를 updateCurrentElementStyle()로 통일
+        function updateCurrentElementStyle() {
+            if (selectedElementIndex >= 0) {
+                const element = config.elements[selectedElementIndex];
+                element.style.x = parseInt(document.getElementById('textX').value) || 0;
+                element.style.y = parseInt(document.getElementById('textY').value) || 0;
+                element.style.width = parseInt(document.getElementById('textWidth').value) || 100;
+                element.style.height = parseInt(document.getElementById('textHeight').value) || 50;
+                element.style.fontFamily = document.getElementById('fontFamily').value;
+                element.style.fontSize = parseInt(document.getElementById('fontSize').value) || 24;
+                element.style.fill = document.getElementById('textColor').value;
+                element.style.textAlign = document.getElementById('textAlign').value;
+                element.style.verticalAlign = document.getElementById('verticalAlign').value;
+                element.style.lineHeight = parseFloat(document.getElementById('lineHeight').value) || 1.5;
+                element.style.whiteSpace = document.getElementById('whiteSpace').value;
+                
+                const strokeWidth = parseInt(document.getElementById('strokeWidth').value) || 0;
+                if (strokeWidth > 0) {
+                    element.style.stroke = document.getElementById('strokeColor').value;
+                    element.style.strokeWidth = strokeWidth;
+                } else {
+                    delete element.style.stroke;
+                    delete element.style.strokeWidth;
+                }
+                
+                element.useR2Font = document.getElementById('useR2Font').checked;
+                updatePreview();
+            }
+        }
+        
+        function addWebFont() {
+            const url = document.getElementById('webFontUrl').value.trim();
+            if (!url) return alert('웹폰트 URL을 입력하세요');
+            if (!config.fonts.includes(url)) {
+                config.fonts.push(url);
+                updateFontList();
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = url;
+                document.head.appendChild(link);
+            }
+            document.getElementById('webFontUrl').value = '';
+        }
+        
+        function updateFontList() {
+            const list = document.getElementById('fontList');
+            const r2Filename = document.getElementById('r2FontFilename').value;
+            let items = [];
+            
+            if (config.fontSettings.mode === 'r2' && r2Filename) {
+                items.push(`<div class="element-item"><span>📁 R2: ${r2Filename}</span></div>`);
+            }
+            
+            config.fonts.forEach((font, index) => {
+                const displayUrl = font.length > 40 ? font.substring(0, 40) + '...' : font;
+                items.push(`<div class="element-item"><span style="font-size: 12px;" title="${font}">🌐 ${displayUrl}</span><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="removeFont(${index})">삭제</button></div>`);
+            });
+            
+            list.innerHTML = items.length > 0 ? items.join('') : '<div class="empty-state">등록된 폰트가 없습니다</div>';
+        }
+        
+        function removeFont(index) {
+            config.fonts.splice(index, 1);
+            updateFontList();
+        }
+        
+        function handleBgImageUpload(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        config.imageSize.width = img.width;
+                        config.imageSize.height = img.height;
+                        document.getElementById('imageWidth').value = img.width;
+                        document.getElementById('imageHeight').value = img.height;
+                        
+                        const canvas = document.getElementById('previewCanvas');
+                        const maxWidth = canvas.parentElement.offsetWidth - 48;
+                        currentScale = Math.min(1, maxWidth / img.width);
+                        
+                        canvas.style.width = (img.width * currentScale) + 'px';
+                        canvas.style.height = (img.height * currentScale) + 'px';
+                        canvas.style.backgroundImage = `url(${event.target.result})`;
+                        canvas.style.backgroundSize = '100% 100%';
+                        canvas.innerHTML = '';
+                        updatePreview();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function createDefaultCanvas() {
+            const width = parseInt(document.getElementById('imageWidth').value) || 800;
+            const height = parseInt(document.getElementById('imageHeight').value) || 600;
+            
+            config.imageSize.width = width;
+            config.imageSize.height = height;
+            
+            const canvas = document.getElementById('previewCanvas');
+            const maxWidth = canvas.parentElement.offsetWidth - 48;
+            currentScale = Math.min(1, maxWidth / width);
+            
+            canvas.style.width = (width * currentScale) + 'px';
+            canvas.style.height = (height * currentScale) + 'px';
+            canvas.style.background = 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)';
+            canvas.style.backgroundSize = '20px 20px';
+            canvas.style.backgroundPosition = '0 0, 10px 10px';
+            canvas.innerHTML = '';
+            updatePreview();
+        }
+        
+        function clearCanvas() {
+            config.elements = [];
+            selectedElementIndex = -1;
+            const canvas = document.getElementById('previewCanvas');
+            canvas.innerHTML = `<div class="empty-state" style="padding: 60px 40px;"><div style="font-size: 48px; margin-bottom: 16px;">🖼️</div><div>배경 이미지를 업로드하거나</div><div>기본 캔버스를 생성하세요</div></div>`;
+            canvas.style.background = 'white';
+            canvas.style.backgroundImage = '';
+            updateElementList();
+        }
+        
+        function addTextElement() {
+            const queryParam = document.getElementById('queryParam').value.trim();
+            if (!queryParam) return alert('쿼리 파라미터 이름을 입력하세요');
+            if (config.elements.some(el => el.query === queryParam)) return alert('이미 같은 이름의 쿼리 파라미터가 존재합니다');
+            
+            const element = {
+                query: queryParam,
+                style: {
+                    x: parseInt(document.getElementById('textX').value) || 50,
+                    y: parseInt(document.getElementById('textY').value) || 50,
+                    width: parseInt(document.getElementById('textWidth').value) || 300,
+                    height: parseInt(document.getElementById('textHeight').value) || 100,
+                    fontFamily: document.getElementById('fontFamily').value || 'sans-serif',
+                    fontSize: parseInt(document.getElementById('fontSize').value) || 24,
+                    fill: document.getElementById('textColor').value || '#000000',
+                    textAlign: document.getElementById('textAlign').value || 'left',
+                    verticalAlign: document.getElementById('verticalAlign').value || 'top',
+                    lineHeight: parseFloat(document.getElementById('lineHeight').value) || 1.5,
+                    whiteSpace: document.getElementById('whiteSpace').value || 'pre-wrap'
+                }
+            };
+            
+            const strokeWidth = parseInt(document.getElementById('strokeWidth').value) || 0;
+            if (strokeWidth > 0) {
+                element.style.stroke = document.getElementById('strokeColor').value;
+                element.style.strokeWidth = strokeWidth;
+            }
+            
+            element.useR2Font = document.getElementById('useR2Font').checked;
+            
+            config.elements.push(element);
+            selectElement(config.elements.length - 1);
+            document.getElementById('queryParam').value = '';
+            showNotification('✅ 텍스트 요소가 추가되었습니다', 'success');
+        }
+        
+        function updateSelectedElement() {
+            if (selectedElementIndex < 0) return alert('수정할 요소를 먼저 선택하세요');
+            updateCurrentElementStyle();
+            updateElementList();
+            showNotification('✏️ 요소가 수정되었습니다', 'warning');
+        }
+        
+        function selectElement(index) {
+            selectedElementIndex = index;
+            const element = config.elements[index];
+            
+            document.getElementById('queryParam').value = element.query;
+            document.getElementById('textX').value = element.style.x;
+            document.getElementById('textY').value = element.style.y;
+            document.getElementById('textWidth').value = element.style.width;
+            document.getElementById('textHeight').value = element.style.height;
+            document.getElementById('fontFamily').value = element.style.fontFamily;
+            
+            const fontSelect = document.getElementById('fontFamilySelect');
+            const fontInput = document.getElementById('fontFamily');
+            const fontOptions = Array.from(fontSelect.options).map(opt => opt.value);
+            if (fontOptions.includes(element.style.fontFamily)) {
+                fontSelect.value = element.style.fontFamily;
+                fontSelect.style.display = 'block';
+                fontInput.style.display = 'none';
+            } else {
+                fontSelect.value = 'custom';
+                fontSelect.style.display = 'none';
+                fontInput.style.display = 'block';
+            }
+            
+            document.getElementById('fontSize').value = element.style.fontSize;
+            document.getElementById('textColor').value = element.style.fill;
+            document.getElementById('textColorHex').value = element.style.fill;
+            document.getElementById('textAlign').value = element.style.textAlign;
+            document.getElementById('verticalAlign').value = element.style.verticalAlign || 'top';
+            document.getElementById('lineHeight').value = element.style.lineHeight || 1.5;
+            document.getElementById('whiteSpace').value = element.style.whiteSpace || 'pre-wrap';
+            document.getElementById('strokeColor').value = element.style.stroke || '#ffffff';
+            document.getElementById('strokeWidth').value = element.style.strokeWidth || 0;
+            document.getElementById('useR2Font').checked = element.useR2Font || false;
+            
+            updateElementList();
+            updatePreview();
+        }
+        
+        function removeElement(index) {
+            if (confirm('이 텍스트 요소를 삭제하시겠습니까?')) {
+                config.elements.splice(index, 1);
+                if (selectedElementIndex === index) selectedElementIndex = -1;
+                else if (selectedElementIndex > index) selectedElementIndex--;
+                updateElementList();
+                updatePreview();
+            }
+        }
+        
+        function updateElementList() {
+            const list = document.getElementById('elementList');
+            if (config.elements.length === 0) {
+                list.innerHTML = '<div class="empty-state">추가된 텍스트 요소가 없습니다</div>';
+            } else {
+                list.innerHTML = config.elements.map((element, index) => `
+                    <div class="element-item ${selectedElementIndex === index ? 'selected' : ''}" onclick="selectElement(${index})">
+                        <span><strong>${element.query}</strong><span style="font-size: 12px; color: #6b7280;"> (${element.style.x}, ${element.style.y}) ${element.style.fontSize}px</span></span>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="event.stopPropagation(); removeElement(${index})">삭제</button>
+                    </div>`).join('');
+            }
+        }
+        
+        function updatePreview() {
+            const canvas = document.getElementById('previewCanvas');
+            if (!canvas.style.backgroundImage && !canvas.style.background) return;
+            canvas.querySelectorAll('.text-overlay').forEach(el => el.remove());
+            config.elements.forEach((element, index) => {
+                const div = document.createElement('div');
+                div.className = 'text-overlay' + (selectedElementIndex === index ? ' selected' : '');
+                div.style.left = (element.style.x * currentScale) + 'px';
+                div.style.top = (element.style.y * currentScale) + 'px';
+                div.style.width = (element.style.width * currentScale) + 'px';
+                div.style.height = (element.style.height * currentScale) + 'px';
+                div.style.fontFamily = element.style.fontFamily;
+                div.style.fontSize = (element.style.fontSize * currentScale) + 'px';
+                div.style.color = element.style.fill;
+                div.style.textAlign = element.style.textAlign;
+                div.style.lineHeight = element.style.lineHeight;
+                div.style.whiteSpace = element.style.whiteSpace || 'pre-wrap';
+                div.style.wordWrap = 'break-word';
+                div.style.display = 'flex';
+                div.style.alignItems = element.style.verticalAlign === 'middle' ? 'center' : element.style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start';
+                
+                if (element.style.strokeWidth) {
+                    const sw = element.style.strokeWidth * currentScale;
+                    const sc = element.style.stroke;
+                    div.style.textShadow = `-${sw}px -${sw}px 0 ${sc}, ${sw}px -${sw}px 0 ${sc}, -${sw}px ${sw}px 0 ${sc}, ${sw}px ${sw}px 0 ${sc}`;
+                }
+                
+                const textContent = document.createElement('div');
+                textContent.style.width = '100%';
+                const previewText = document.getElementById('previewText').value || `[${element.query}]`;
+                textContent.textContent = selectedElementIndex === index ? previewText : `[${element.query}]`;
+                div.appendChild(textContent);
+                
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle br';
+                div.appendChild(resizeHandle);
+                
+                div.dataset.index = index;
+                div.addEventListener('mousedown', handleElementMouseDown);
+                resizeHandle.addEventListener('mousedown', handleResizeMouseDown);
+                
+                canvas.appendChild(div);
+            });
+        }
+        
+        function handleElementMouseDown(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+            e.preventDefault(); e.stopPropagation();
+            
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (selectedElementIndex !== index) selectElement(index);
+            
+            isDragging = true;
+            activeTextElement = e.currentTarget;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartX = config.elements[index].style.x;
+            elementStartY = config.elements[index].style.y;
+        }
+        
+        function handleResizeMouseDown(e) {
+            e.preventDefault(); e.stopPropagation();
+            const index = parseInt(e.target.parentElement.dataset.index);
+            if (selectedElementIndex !== index) selectElement(index);
+            
+            isResizing = true;
+            activeTextElement = e.target.parentElement;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+        }
+        
+        function handleGlobalMouseMove(e) {
+            if (!isDragging && !isResizing) return;
+            
+            const element = config.elements[selectedElementIndex];
+            if (!element) return;
+
+            if (isDragging) {
+                const deltaX = (e.clientX - dragStartX) / currentScale;
+                const deltaY = (e.clientY - dragStartY) / currentScale;
+                const newX = Math.round(Math.max(0, Math.min(elementStartX + deltaX, config.imageSize.width - element.style.width)));
+                const newY = Math.round(Math.max(0, Math.min(elementStartY + deltaY, config.imageSize.height - element.style.height)));
+                element.style.x = newX;
+                element.style.y = newY;
+                document.getElementById('textX').value = newX;
+                document.getElementById('textY').value = newY;
+            }
+
+            if (isResizing) {
+                const deltaX = (e.clientX - dragStartX) / currentScale;
+                const deltaY = (e.clientY - dragStartY) / currentScale;
+                const newWidth = Math.round(Math.max(50, element.style.width + deltaX));
+                const newHeight = Math.round(Math.max(30, element.style.height + deltaY));
+                element.style.width = newWidth;
+                element.style.height = newHeight;
+                document.getElementById('textWidth').value = newWidth;
+                document.getElementById('textHeight').value = newHeight;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+            }
+            
+            // ★★★ 개선점 3: 드래그/리사이즈 중 updatePreview()를 호출하여 실시간으로 반영
+            updatePreview();
+        }
+        
+        function handleGlobalMouseUp(e) {
+            if (isDragging || isResizing) {
+                isDragging = false;
+                isResizing = false;
+                activeTextElement = null;
+                // 마우스를 놓았을 때 마지막으로 한 번 더 업데이트
+                updatePreview();
+            }
+        }
+        
+        function generateJSON() {
+            updateFontMode();
+            config.imageSize.width = parseInt(document.getElementById('imageWidth').value);
+            config.imageSize.height = parseInt(document.getElementById('imageHeight').value);
+            
+            const jsonOutput = JSON.stringify(config, null, 2);
+            document.getElementById('jsonOutput').textContent = jsonOutput;
+            
+            const bucketName = document.getElementById('bucketName').value || 'my-bucket';
+            const projectFolder = document.getElementById('projectFolder').value || 'elise';
+            const imagePath = document.getElementById('imagePath').value || 'image.png';
+            
+            // ★★★ 개선점 1: 파일 구조 예시 업데이트 ★★★
+            document.getElementById('fileStructure').textContent = 
+`R2 버킷: ${bucketName}
+└── ${projectFolder}/  (프로젝트 폴더)
+    ├── ${projectFolder}.json  (이 설정 파일)
+    ├── fonts/
+    │   └── ${config.fontSettings.r2FontFilename || '(폰트 파일)'}
+    └── ${imagePath.split('/')[0]}/
+        └── ... (이미지 파일들)`;
+
+            const baseUrl = document.getElementById('baseUrl').value || 'https://your-worker.domain.com';
+            const fullImagePath = `${projectFolder}/${imagePath}`;
+            const queries = config.elements.map(el => `${el.query}=텍스트_예시`).join('&');
+            
+            // ★★★ 개선점 1: 사용 예시 URL 업데이트 ★★★
+            document.getElementById('usageExample').textContent = 
+`마크다운 이미지 문법:
+![이미지](${baseUrl}/${bucketName}/${fullImagePath}?${queries})
+
+직접 URL:
+${baseUrl}/${bucketName}/${fullImagePath}?${queries}`;
+            
+            document.getElementById('jsonModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('jsonModal').style.display = 'none';
+        }
+        
+        function copyJSON() {
+            const jsonText = document.getElementById('jsonOutput').textContent;
+            if (!jsonText || jsonText === '') generateJSON();
+            navigator.clipboard.writeText(document.getElementById('jsonOutput').textContent)
+                .then(() => showNotification('📋 JSON이 클립보드에 복사되었습니다', 'success'));
+        }
+        
+        function downloadJSON() {
+            const jsonText = document.getElementById('jsonOutput').textContent || JSON.stringify(config, null, 2);
+            const projectFolder = document.getElementById('projectFolder').value || 'config';
+            const blob = new Blob([jsonText], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectFolder}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function loadJSON() {
+            document.getElementById('jsonFile').click();
+        }
+        
+        function handleJSONLoad(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        config = JSON.parse(e.target.result);
+                        document.getElementById('imageWidth').value = config.imageSize.width;
+                        document.getElementById('imageHeight').value = config.imageSize.height;
+                        
+                        if (config.fontSettings) {
+                            const mode = config.fontSettings.mode || 'default';
+                            config.fontSettings.mode = mode;
+                            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                            document.querySelector(`.tab-button[onclick*="'${mode}'"]`).classList.add('active');
+                            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                            document.getElementById(mode + 'FontTab').classList.add('active');
+                            if (config.fontSettings.r2FontFilename) {
+                                document.getElementById('r2FontFilename').value = config.fontSettings.r2FontFilename;
+                            }
+                        }
+                        
+                        updateFontList();
+                        updateElementList();
+                        createDefaultCanvas();
+                        updatePreview();
+                        showNotification('✅ JSON 파일을 성공적으로 불러왔습니다', 'success');
+                    } catch (err) {
+                        alert('JSON 파일 파싱 오류: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+            event.target.value = '';
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            const colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444' };
+            notification.style.cssText = `position: fixed; top: 20px; right: 20px; background: ${colors[type]}; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; animation: slideIn 0.3s ease;`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+        
+        const style = document.createElement('style');
+        style.textContent = `@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }`;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
