@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>깃허브 이미지 말풍선 편집기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 15px;
+            align-items: center;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .editor-container {
+            position: relative;
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #fafafa;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .editor-container.has-image {
+            border: none;
+            background: transparent;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .base-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .speech-bubble {
+            position: absolute;
+            background: white;
+            border: 3px solid #333;
+            border-radius: 20px;
+            padding: 12px 18px;
+            font-weight: bold;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            min-width: 120px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .speech-bubble:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .speech-bubble.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 30px;
+            width: 0;
+            height: 0;
+            border: 12px solid transparent;
+            border-top-color: #333;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 33px;
+            width: 0;
+            height: 0;
+            border: 9px solid transparent;
+            border-top-color: white;
+        }
+
+        .bubble-controls {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+        }
+
+        .bubble-controls.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .download-section {
+            margin-top: 30px;
+            text-align: center;
+            padding: 20px;
+            background: rgba(118, 75, 162, 0.1);
+            border-radius: 15px;
+        }
+
+        .error {
+            color: #e74c3c;
+            padding: 10px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #27ae60;
+            padding: 10px;
+            background: rgba(39, 174, 96, 0.1);
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .input-group {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 말풍선 편집기</h1>
+            <p>깃허브 이미지에 말풍선을 추가해보세요</p>
+        </div>
+
+        <div class="controls">
+            <div class="input-group">
+                <label for="imageUrl">깃허브 이미지 URL</label>
+                <input type="url" id="imageUrl" placeholder="https://raw.githubusercontent.com/user_name/repository_name/refs/heads/main/image.png">
+            </div>
+            <button class="btn" onclick="loadImage()">이미지 로드</button>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="editor-container" id="editorContainer">
+            <div class="placeholder">
+                이미지 URL을 입력하고 "이미지 로드" 버튼을 클릭하세요<br>
+                이미지가 로드되면 클릭하여 말풍선을 추가할 수 있습니다
+            </div>
+        </div>
+
+        <div class="bubble-controls" id="bubbleControls">
+            <h3>선택된 말풍선 편집</h3>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+                <div class="input-group" style="flex: 2; min-width: 200px;">
+                    <label for="bubbleText">텍스트</label>
+                    <input type="text" id="bubbleText" placeholder="말풍선 내용을 입력하세요">
+                </div>
+                <div class="input-group" style="flex: 1; min-width: 150px;">
+                    <label for="bubbleColor">배경색</label>
+                    <select id="bubbleColor">
+                        <option value="white">흰색</option>
+                        <option value="#ffeb3b">노란색</option>
+                        <option value="#e3f2fd">하늘색</option>
+                        <option value="#f3e5f5">분홍색</option>
+                        <option value="#e8f5e8">연두색</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="updateSelectedBubble()">수정</button>
+                <button class="btn" onclick="deleteSelectedBubble()" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">삭제</button>
+            </div>
+        </div>
+
+        <div class="download-section">
+            <h3>완성된 이미지 다운로드</h3>
+            <p>말풍선이 추가된 이미지를 PNG 파일로 저장하세요</p>
+            <button class="btn" onclick="downloadImage()" style="margin-top: 15px;">
+                📥 이미지 다운로드
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentImage = null;
+        let bubbleCounter = 0;
+        let selectedBubble = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        function showMessage(text, type = 'info') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = type;
+            setTimeout(() => {
+                messageEl.textContent = '';
+                messageEl.className = '';
+            }, 3000);
+        }
+
+        function loadImage() {
+            const url = document.getElementById('imageUrl').value.trim();
+            if (!url) {
+                showMessage('이미지 URL을 입력해주세요.', 'error');
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = function() {
+                currentImage = img;
+                const container = document.getElementById('editorContainer');
+                container.innerHTML = `
+                    <div class="canvas-container">
+                        <img src="${url}" class="base-image" id="baseImage">
+                    </div>
+                `;
+                container.classList.add('has-image');
+                
+                // 이미지 클릭 이벤트 추가
+                const baseImage = document.getElementById('baseImage');
+                baseImage.addEventListener('click', addSpeechBubble);
+                
+                showMessage('이미지가 성공적으로 로드되었습니다. 클릭하여 말풍선을 추가하세요!', 'success');
+            };
+
+            img.onerror = function() {
+                showMessage('이미지를 로드할 수 없습니다. URL을 확인해주세요.', 'error');
+            };
+
+            img.src = url;
+        }
+
+        function addSpeechBubble(event) {
+            event.preventDefault();
+            
+            const container = document.querySelector('.canvas-container');
+            const rect = container.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            bubbleCounter++;
+            const bubble = document.createElement('div');
+            bubble.className = 'speech-bubble';
+            bubble.textContent = `말풍선 ${bubbleCounter}`;
+            bubble.style.left = `${x - 60}px`;
+            bubble.style.top = `${y - 40}px`;
+            bubble.dataset.id = `bubble-${bubbleCounter}`;
+
+            // 말풍선 이벤트 리스너 추가
+            bubble.addEventListener('mousedown', startDrag);
+            bubble.addEventListener('click', selectBubble);
+
+            container.appendChild(bubble);
+            selectBubble({ target: bubble, stopPropagation: () => {} });
+        }
+
+        function selectBubble(event) {
+            event.stopPropagation();
+            
+            // 이전 선택 해제
+            if (selectedBubble) {
+                selectedBubble.classList.remove('selected');
+            }
+            
+            selectedBubble = event.target;
+            selectedBubble.classList.add('selected');
+            
+            // 편집 컨트롤 표시
+            const controls = document.getElementById('bubbleControls');
+            controls.classList.add('show');
+            
+            // 현재 텍스트를 입력 필드에 설정
+            document.getElementById('bubbleText').value = selectedBubble.textContent;
+            
+            // 현재 배경색 설정
+            const computedStyle = window.getComputedStyle(selectedBubble);
+            const bgColor = computedStyle.backgroundColor;
+            document.getElementById('bubbleColor').value = rgbToHex(bgColor) || 'white';
+        }
+
+        function updateSelectedBubble() {
+            if (!selectedBubble) return;
+            
+            const text = document.getElementById('bubbleText').value.trim();
+            const color = document.getElementById('bubbleColor').value;
+            
+            if (text) {
+                selectedBubble.textContent = text;
+            }
+            selectedBubble.style.backgroundColor = color;
+            
+            showMessage('말풍선이 수정되었습니다.', 'success');
+        }
+
+        function deleteSelectedBubble() {
+            if (!selectedBubble) return;
+            
+            selectedBubble.remove();
+            selectedBubble = null;
+            document.getElementById('bubbleControls').classList.remove('show');
+            
+            showMessage('말풍선이 삭제되었습니다.', 'success');
+        }
+
+        function startDrag(event) {
+            if (event.target.classList.contains('speech-bubble')) {
+                isDragging = true;
+                selectedBubble = event.target;
+                
+                const rect = event.target.getBoundingClientRect();
+                const containerRect = event.target.parentNode.getBoundingClientRect();
+                
+                dragOffset.x = event.clientX - rect.left;
+                dragOffset.y = event.clientY - rect.top;
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                
+                event.preventDefault();
+                selectBubble(event);
+            }
+        }
+
+        function drag(event) {
+            if (!isDragging || !selectedBubble) return;
+            
+            const container = selectedBubble.parentNode;
+            const containerRect = container.getBoundingClientRect();
+            
+            const x = event.clientX - containerRect.left - dragOffset.x;
+            const y = event.clientY - containerRect.top - dragOffset.y;
+            
+            selectedBubble.style.left = `${Math.max(0, x)}px`;
+            selectedBubble.style.top = `${Math.max(0, y)}px`;
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function downloadImage() {
+            if (!currentImage) {
+                showMessage('먼저 이미지를 로드해주세요.', 'error');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const baseImage = document.getElementById('baseImage');
+            canvas.width = baseImage.naturalWidth;
+            canvas.height = baseImage.naturalHeight;
+            
+            // 기본 이미지 그리기
+            ctx.drawImage(currentImage, 0, 0);
+            
+            // 말풍선들 그리기
+            const bubbles = document.querySelectorAll('.speech-bubble');
+            const scale = canvas.width / baseImage.offsetWidth;
+            
+            bubbles.forEach(bubble => {
+                const rect = bubble.getBoundingClientRect();
+                const containerRect = bubble.parentNode.getBoundingClientRect();
+                
+                const x = (rect.left - containerRect.left) * scale;
+                const y = (rect.top - containerRect.top) * scale;
+                const width = rect.width * scale;
+                const height = rect.height * scale;
+                
+                // 말풍선 배경 그리기
+                ctx.fillStyle = window.getComputedStyle(bubble).backgroundColor;
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3 * scale;
+                
+                // 둥근 사각형 그리기
+                const radius = 20 * scale;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // 말풍선 꼬리 그리기
+                const tailX = x + 30 * scale;
+                const tailY = y + height;
+                ctx.beginPath();
+                ctx.moveTo(tailX, tailY);
+                ctx.lineTo(tailX - 12 * scale, tailY + 12 * scale);
+                ctx.lineTo(tailX + 12 * scale, tailY + 12 * scale);
+                ctx.closePath();
+                ctx.fillStyle = window.getComputedStyle(bubble).backgroundColor;
+                ctx.fill();
+                ctx.stroke();
+                
+                // 텍스트 그리기
+                ctx.fillStyle = '#000';
+                ctx.font = `bold ${16 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    bubble.textContent,
+                    x + width / 2,
+                    y + height / 2
+                );
+            });
+            
+            // 다운로드
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'speech-bubble-image.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('이미지가 다운로드되었습니다!', 'success');
+            });
+        }
+
+        function rgbToHex(rgb) {
+            if (!rgb) return null;
+            const result = rgb.match(/\d+/g);
+            if (!result) return null;
+            return "#" + ((1 << 24) + (parseInt(result[0]) << 16) + (parseInt(result[1]) << 8) + parseInt(result[2])).toString(16).slice(1);
+        }
+
+        // 빈 영역 클릭 시 선택 해제
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.speech-bubble') && !event.target.closest('.bubble-controls')) {
+                if (selectedBubble) {
+                    selectedBubble.classList.remove('selected');
+                    selectedBubble = null;
+                    document.getElementById('bubbleControls').classList.remove('show');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
